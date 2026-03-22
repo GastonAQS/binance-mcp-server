@@ -48,6 +48,25 @@ cd binance-mcp-server
 npm install  # or yarn install
 ```
 
+## Docker
+
+Build the image:
+
+```sh
+docker build -t binance-mcp-server .
+```
+
+Run the MCP server over stdio with Docker:
+
+```sh
+docker run -i --rm \
+  -e BINANCE_API_KEY=your_binance_api_key_here \
+  -e BINANCE_API_SECRET=your_binance_api_secret_here \
+  binance-mcp-server
+```
+
+The `-i` flag is required so the MCP client can communicate with the server over standard input/output.
+
 ## Configuration
 
 To configure the server, create a `.env` file in the root directory and specify the following variables:
@@ -136,6 +155,38 @@ Make sure to pass the correct location of the `index.js` file in the `args` fiel
 
 Restart Claude Desktop for the changes to take effect.
 
+## Integration with Docker-based MCP Clients
+
+If your MCP client supports launching servers with Docker, configure it to run this image with stdio attached.
+
+Example client configuration:
+
+```json
+{
+  "mcpServers": {
+    "binance-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "BINANCE_API_KEY",
+        "-e",
+        "BINANCE_API_SECRET",
+        "binance-mcp-server"
+      ],
+      "env": {
+        "BINANCE_API_KEY": "your_binance_api_key_here",
+        "BINANCE_API_SECRET": "your_binance_api_secret_here"
+      }
+    }
+  }
+}
+```
+
+If your client does not inject `env` values into the `docker` process, replace the bare `-e` entries above with explicit `KEY=value` pairs in the `args` list.
+
 ## Usage (For Connecting MCP HOST other than Claude)
 
 ### Start the Server
@@ -143,7 +194,8 @@ Restart Claude Desktop for the changes to take effect.
 To start the MCP server, run:
 
 ```sh
-npm start  # or node index.js
+npm run build
+npm start
 ```
 
 ## Functions

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { algoClient, spotClient } from "../config/client.js";
+import { algoClient } from "../config/client.js";
 
 export function registerBinanceTimeWeightedAveragePriceFutureAlgo(server: McpServer) {
   server.tool(

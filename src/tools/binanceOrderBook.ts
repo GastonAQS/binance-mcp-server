@@ -11,8 +11,9 @@ export function registerBinanceOrderBook(server: McpServer) {
     },
     async ({ symbol }) => {
       try {
-
-        const orderBook = await spotClient.orderBook(symbol, {limit: 50});
+        const legacySpotClient = spotClient as any;
+        const response = await legacySpotClient.restAPI.depth({ symbol, limit: 50 });
+        const orderBook = await response.data();
 
         return {
           content: [

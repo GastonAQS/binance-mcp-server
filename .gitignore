@@ -51,3 +51,5 @@ dist/
 src/tools/binance-spot/a.sh
 a.sh
 src/tools/binance-spot/a.txt
+
+.serena/
