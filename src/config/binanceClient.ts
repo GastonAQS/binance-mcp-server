@@ -15,15 +15,51 @@ import { Mining } from "@binance/mining";
 import { VipLoan } from "@binance/vip-loan";
 import { Staking } from "@binance/staking";
 
-const API_KEY = process.env.BINANCE_API_KEY;
-const API_SECRET = process.env.BINANCE_API_SECRET;
+type BinanceAuthMode = "hmac" | "key-pair" | "missing";
+
+type BinanceRestConfiguration = {
+    apiKey: string;
+    apiSecret?: string;
+    privateKey?: Buffer;
+    privateKeyPassphrase?: string;
+    privateKeyAlgo?: "RSA" | "ED25519";
+    basePath: string;
+};
+
+const API_KEY = process.env.BINANCE_API_KEY?.trim();
+const API_SECRET = process.env.BINANCE_API_SECRET?.trim();
+const PRIVATE_KEY = process.env.BINANCE_PRIVATE_KEY?.replace(/\\n/g, "\n")?.trim();
+const PRIVATE_KEY_PASSPHRASE = process.env.BINANCE_PRIVATE_KEY_PASSPHRASE;
+const PRIVATE_KEY_ALGO = process.env.BINANCE_PRIVATE_KEY_ALGO?.trim().toUpperCase();
 const BASE_URL = "https://api.binance.com";
 
-const configurationRestAPI = {
+const configurationRestAPI: BinanceRestConfiguration = {
     apiKey: API_KEY ?? "",
-    apiSecret: API_SECRET ?? "",
     basePath: BASE_URL ?? ""
 };
+
+if (PRIVATE_KEY) {
+    configurationRestAPI.privateKey = Buffer.from(PRIVATE_KEY, "utf8");
+
+    if (PRIVATE_KEY_PASSPHRASE) {
+        configurationRestAPI.privateKeyPassphrase = PRIVATE_KEY_PASSPHRASE;
+    }
+
+    if (PRIVATE_KEY_ALGO === "RSA" || PRIVATE_KEY_ALGO === "ED25519") {
+        configurationRestAPI.privateKeyAlgo = PRIVATE_KEY_ALGO;
+    }
+} else {
+    configurationRestAPI.apiSecret = API_SECRET ?? "";
+}
+
+export const isHmacAuthConfigured = Boolean(API_KEY && API_SECRET);
+export const isKeyPairAuthConfigured = Boolean(API_KEY && PRIVATE_KEY);
+export const isBinanceAuthConfigured = isHmacAuthConfigured || isKeyPairAuthConfigured;
+export const configuredBinanceAuthMode: BinanceAuthMode = isKeyPairAuthConfigured
+    ? "key-pair"
+    : isHmacAuthConfigured
+      ? "hmac"
+      : "missing";
 
 export const spotClient = new Spot({ configurationRestAPI });
 export const algoClient = new Algo({ configurationRestAPI });

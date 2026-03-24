@@ -1,52 +1,239 @@
 # Binance MCP Server
 
-## Overview
+Binance MCP Server is a TypeScript Model Context Protocol server that exposes Binance API capabilities over stdio. It can be launched directly by Claude Desktop or any MCP client that supports stdio-based servers.
 
-Binance MCP Server is a backend service designed to interact with the Binance API. It facilitates seamless interaction with the Binance exchange, enabling users to view their portfolio, convert tokens, and execute trades with minimal market impact. The server utilizes the Model Context Protocol (MCP) framework to ensure secure, structured, and efficient transactions.
+The server includes both:
 
-### Key Functionalities:
-
-- Interact with Binance exchange API for account information and trading
-- Display portfolio composition and valuation
-- Execute smart token conversions with market impact mitigation
-- Process market orders and algorithmic trading strategies
-- Retrieve real-time trading data and account information
-- Implement structured transactions using the Model Context Protocol framework
-- Provide secure authentication and API key management for Binance integration
+- A broad domain-based tool surface for Spot, Algo, Convert, Wallet, Simple Earn, Staking, Mining, VIP Loan, NFT, Pay, Fiat, Rebate, C2C, Copy Trading, and Dual Investment APIs
+- A small set of README-friendly compatibility tools for common account, order book, spot order, TWAP, and automated-trading flows
 
 ## Features
 
-- [x] **Binance API Integration**: Connect to Binance exchange for account information and trading operations
-- [x] **Portfolio Management**: View detailed portfolio composition, market value, and percentage allocation
-- [x] **Portfolio Analytics**: Optional historical value tracking to monitor performance over time
-- [x] **Smart Token Conversion**: Convert between tokens with intelligent order execution strategies
-- [x] **Market Impact Mitigation**: Automatically use algorithmic trading for larger orders to prevent price slippage
-- [x] **Account Management**: Retrieve detailed account information, balances, and trading history
-- [x] **Market Data Access**: Access real-time order books and market data for informed trading decisions
-- [x] **Order Execution**: Place spot market orders with flexible quantity specifications
-- [ ] **Algorithmic Trading Support**: Implement Time-Weighted Average Price (TWAP) orders to minimize market impact
-- [ ] **Automated Trading**: Execute trades programmatically based on predefined strategies
-- [ ] **Secure Authentication**: Manage API keys and secure connections to Binance services
-- [ ] **Comprehensive Error Handling**: Detailed error reporting for transaction failures and API issues
+- [x] Binance API integration over MCP stdio
+- [x] Spot market data, account, order, and user data stream tools
+- [x] Convert, Wallet, Simple Earn, Staking, Mining, VIP Loan, NFT, Pay, Fiat, Rebate, C2C, Copy Trading, and Dual Investment tool groups
+- [x] Portfolio/account summary via `binanceAccountInfo`
+- [x] Historical account snapshots via `binanceAccountSnapshot`
+- [x] Spot market order execution via `binanceSpotPlaceOrder`
+- [x] Algorithmic trading support with spot and futures TWAP tools
+- [x] Automated trading strategy selection via `binanceAutomatedTrade`
+- [x] Secure authentication with HMAC API secret or optional RSA/ED25519 private key configuration
+- [x] Structured error responses for MCP tool failures
+- [x] Docker and Claude Desktop integration guidance
 
 ## Requirements
 
-Before setting up the Binance MCP Server, ensure you have the following installed:
+Before setting up the server, install:
 
-- Node.js (v16 or later)
-- npm or yarn
-- Binance API key and secret (for Binance exchange integration)
-- A valid Binance Smart Chain (BSC) wallet private key (for blockchain transactions)
+- Node.js 22.12.0 or later
+- npm
+- Binance API credentials
+
+Supported authentication modes:
+
+1. HMAC:
+   - `BINANCE_API_KEY`
+   - `BINANCE_API_SECRET`
+2. Key pair:
+   - `BINANCE_API_KEY`
+   - `BINANCE_PRIVATE_KEY`
+   - Optional: `BINANCE_PRIVATE_KEY_PASSPHRASE`
+   - Optional: `BINANCE_PRIVATE_KEY_ALGO` with `RSA` or `ED25519`
 
 ## Installation
-
-Clone the repository and install dependencies:
 
 ```sh
 git clone https://github.com/your-repo/binance-mcp-server.git
 cd binance-mcp-server
-npm install  # or yarn install
+npm install
 ```
+
+Build the server:
+
+```sh
+npm run build
+```
+
+Run the server locally:
+
+```sh
+npm start
+```
+
+Run the built executable directly:
+
+```sh
+./build/index.js
+```
+
+Run the interactive setup flow:
+
+```sh
+npm run init:build
+```
+
+## Configuration
+
+### HMAC Authentication
+
+Create a `.env` file in the project root:
+
+```sh
+BINANCE_API_KEY=your_binance_api_key_here
+BINANCE_API_SECRET=your_binance_api_secret_here
+```
+
+### Key-Pair Authentication
+
+If you use a self-managed RSA or ED25519 Binance API key, configure:
+
+```sh
+BINANCE_API_KEY=your_binance_api_key_here
+BINANCE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+BINANCE_PRIVATE_KEY_PASSPHRASE=optional_passphrase
+BINANCE_PRIVATE_KEY_ALGO=RSA
+```
+
+`BINANCE_PRIVATE_KEY` may be provided with literal newlines or `\n` escapes.
+
+## Creating a Binance API Key
+
+Binance changes account-policy and API-key prerequisites over time, so treat the Binance UI and official docs as the source of truth for the exact steps and requirements.
+
+A typical flow is:
+
+1. Sign in to Binance and open **Account**.
+   ![Binance Homepage](readme/homepage.png)
+2. Open **API Management** and create an API key.
+   ![API Management](readme/API%20Management.png)
+3. Choose the API key type supported by your setup.
+   ![API Key Type](readme/API%20Key%20Type.png)
+4. Name the key and complete Binance verification.
+   ![Create API key](readme/Create%20API%20key.png)
+5. Review the resulting security and permission settings.
+   ![Security Management](readme/Security%20Management.png)
+
+Official Binance docs:
+
+- General developer docs: https://developers.binance.com/en/
+- Spot API docs: https://developers.binance.com/docs/binance-spot-api-docs/README
+- Algo API docs: https://developers.binance.com/docs/algo
+
+## Tool Surface
+
+### Compatibility Shortcut Tools
+
+These are registered explicitly for common workflows and match the README examples.
+
+1. `binanceAccountInfo`
+   - Retrieves account balances, API-key permissions, a BTC-valued asset summary, and recent spot snapshot information.
+2. `binanceAccountSnapshot`
+   - Retrieves daily account snapshots for `SPOT`, `MARGIN`, or `FUTURES` and includes the current `BTCUSDT` reference price.
+3. `binanceOrderBook`
+   - Retrieves order book depth for a symbol.
+4. `binanceSpotPlaceOrder`
+   - Places a spot `MARKET` order using either `quantity` or `quoteOrderQty`.
+5. `binanceTimeWeightedAveragePriceFutureAlgo`
+   - Places a Binance Algo futures TWAP order.
+6. `binanceAutomatedTrade`
+   - Uses a predefined strategy to choose between a spot market order and a spot TWAP order based on estimated notional.
+
+Example payloads:
+
+```json
+{
+  "symbol": "BTCUSDT",
+  "side": "BUY",
+  "quantity": 0.001
+}
+```
+
+```json
+{
+  "symbol": "BTCUSDT",
+  "side": "BUY",
+  "quantity": 1,
+  "duration": 3600
+}
+```
+
+```json
+{
+  "symbol": "BTCUSDT",
+  "side": "BUY",
+  "quantity": 0.5,
+  "strategy": "ADAPTIVE_SPOT_TWAP",
+  "notionalThresholdUsd": 1000,
+  "duration": 1800
+}
+```
+
+### Domain-Based Tool Groups
+
+The full server surface is larger than the compatibility shortcuts above. The entrypoint registers:
+
+- Spot
+- Algo
+- Simple Earn
+- C2C
+- Convert
+- Wallet
+- Copy Trading
+- Fiat
+- NFT
+- Pay
+- Rebate
+- Dual Investment
+- Mining
+- VIP Loan
+- Staking
+
+Representative tool names include:
+
+- `BinanceGetAccount`
+- `BinanceDepth`
+- `BinanceNewOrder`
+- `BinanceSpotTimeWeightedAveragePriceNewOrder`
+- `BinanceTimeWeightedAveragePriceNewOrder`
+- `BinanceConvertSendQuoteRequest`
+- `BinanceWalletUserAsset`
+
+## Claude Desktop Integration
+
+Build the server first:
+
+```sh
+npm run build
+```
+
+Then add it to your Claude Desktop configuration file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
+
+Example:
+
+```json
+{
+  "mcpServers": {
+    "binance-mcp": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/binance-mcp-server/build/index.js"
+      ],
+      "env": {
+        "BINANCE_API_KEY": "your_binance_api_key_here",
+        "BINANCE_API_SECRET": "your_binance_api_secret_here"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+If you prefer the interactive setup flow, run `npm run init:build`. It can generate `.env` and write Claude Desktop config on macOS, Windows, and Linux. If auto-configuration is not possible, it writes a local `config.json` fallback.
 
 ## Docker
 
@@ -56,7 +243,7 @@ Build the image:
 docker build -t binance-mcp-server .
 ```
 
-Run the MCP server over stdio with Docker:
+Run the MCP server over stdio:
 
 ```sh
 docker run -i --rm \
@@ -67,99 +254,7 @@ docker run -i --rm \
 
 The `-i` flag is required so the MCP client can communicate with the server over standard input/output.
 
-## Configuration
-
-To configure the server, create a `.env` file in the root directory and specify the following variables:
-
-```sh
-# Binance API Configuration
-BINANCE_API_KEY=your_binance_api_key_here
-BINANCE_API_SECRET=your_binance_api_secret_here
-```
-
-## Creating a Binance API Key
-
-Before using the Binance API integration, you need to create an API key. This allows you to connect to Binance's servers via several programming languages, pull data from Binance, and interact with external applications. You can view your wallet and transaction data, make trades, and deposit and withdraw funds in third-party programs.
-
-**Prerequisites:**
-- You need to make a deposit of any amount to your Spot Wallet to activate your account
-- Complete identity verification
-- Enable two-factor authentication (2FA) on your account
-
-**Steps to create a Binance API Key:**
-
-1. Log in to your Binance account and click the profile icon, then [Account].
-   ![Binance Homepage](readme/homepage.png)
-
-2. Go to [API Management] then click [Create API].
-   ![API Management](readme/API%20Management.png)
-
-3. Select your preferred API Key type:
-   - System-generated API keys (HMAC symmetric encryption) - You'll get the API key and the Secret Key.
-   - Self-generated API keys (Ed25519 or RSA asymmetric encryption) - You'll receive an API key, but you have to create your own public-private key pair.
-   ![API Key Type](readme/API%20Key%20Type.png)
-
-4. Enter a label/name for your API Key.
-   ![Create API key](readme/Create%20API%20key.png)
-
-5. Verify with your 2FA devices and passkeys.
-   ![Security Management](readme/Security%20Management.png)
-
-6. Your API key is now created.
-
-For more details on Binance API, please refer to the [Binance API Documentation](https://developers.binance.com/en/).
-
-
-## Integration with Claude Desktop
-
-Before integrating this MCP server with Claude Desktop, ensure you have the following installed:
-
-- Claude Desktop
-
-Then build the server using the following command:
-
-```sh
-npm run build  
-```
-
-To add this MCP server to Claude Desktop:
-
-Create or edit the Claude Desktop configuration file at:
-
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- Linux: `~/.config/Claude/claude_desktop_config.json`
-
-Add the following configuration:
-
-```json
-{
-    "mcpServers": {
-        "binance-mcp": {
-            "command": "node",
-            "args": [
-                "/Users/Username/Desktop/binance-mcp/build/index.js"
-            ],
-            "env": {
-                "BINANCE_API_KEY": "BINANCE_API_KEY",
-                "BINANCE_API_SECRET": "BINANCE_API_SECRET"
-            },
-            "disabled": false,
-            "autoApprove": []
-        }
-    }
-}
-```
-
-Make sure to pass the correct location of the `index.js` file in the `args` field.
-
-Restart Claude Desktop for the changes to take effect.
-
-## Integration with Docker-based MCP Clients
-
-If your MCP client supports launching servers with Docker, configure it to run this image with stdio attached.
-
-Example client configuration:
+For Docker-based MCP clients:
 
 ```json
 {
@@ -185,86 +280,29 @@ Example client configuration:
 }
 ```
 
-If your client does not inject `env` values into the `docker` process, replace the bare `-e` entries above with explicit `KEY=value` pairs in the `args` list.
+If your client does not project `env` values into the Docker process, replace the bare `-e` entries with explicit `KEY=value` pairs.
 
-## Usage (For Connecting MCP HOST other than Claude)
+## Validation
 
-### Start the Server
-
-To start the MCP server, run:
+Recommended local validation steps:
 
 ```sh
 npm run build
-npm start
+BINANCE_API_KEY=dummy BINANCE_API_SECRET=dummy ./build/index.js
 ```
 
-## Functions
-
-
-### Binance API Functions
-
-1. **Get Binance Account Information - `binanceAccountInfo`**
-
-   Retrieves comprehensive information about your Binance account, including balances, trading permissions, and account status.
-
-2. **Get Binance Account Snapshot - `binanceAccountSnapshot`**
-
-   Gets a snapshot of your Binance account status, including current BTC price information. Includes history for the last 30 days.
-
-3. **Check Binance Order Book - `binanceOrderBook`**
-    ```json
-    {
-        "symbol": "BTCUSDT"
-    }
-    ```
-    Retrieves the current order book for a specified trading pair, showing available buy and sell orders up to 50 levels deep.
-
-4. **Place Spot Market Order - `binanceSpotPlaceOrder`**
-    ```json
-    {
-        "symbol": "BTCUSDT",
-        "side": "BUY",
-        "quantity": 0.001,
-        // OR
-        "quoteOrderQty": 100
-    }
-    ```
-    Places a market order for immediate execution at the best available price. Use `quantity` to specify the amount of base asset or `quoteOrderQty` to specify the amount in quote currency. Suitable for small orders.
-
-5. **Place TWAP Order - `binanceTimeWeightedAveragePriceFutureAlgo`**
-    ```json
-    {
-        "symbol": "BTCUSDT",
-        "side": "BUY",
-        "quantity": 1.0,
-        "duration": 3600
-    }
-    ```
-    Places a Time-Weighted Average Price (TWAP) order that executes gradually over a specified duration to minimize market impact. Suitable for large orders that might otherwise cause significant price movements.
-
-## Model Context Protocol (MCP)
-
-The **Model Context Protocol (MCP)** is an open standard designed to enhance the way applications interact with AI models and blockchain-based computational systems. MCP establishes structured context that improves the efficiency of automated transactions and decentralized applications.
-
-### Benefits of MCP:
-
-- **Standardization**: Defines a unified approach for application interactions.
-- **Efficiency**: Reduces computational overhead and improves transaction speed.
-- **Interoperability**: Supports integration across multiple platforms and blockchain ecosystems.
+`npm test` is declared in `package.json`, but the repository snapshot does not currently include `test/testServer.js`, so that script should be treated as unavailable until the missing test file is restored.
 
 ## Error Handling
 
-When a transaction fails, the server returns an error message with details. Check the console logs for more debugging information. Common error scenarios include:
+Tool failures are returned as MCP text responses with `isError: true`. Common categories include:
 
-- Insufficient funds in the wallet
-- Invalid recipient address
-- Network congestion or RPC issues
-- Binance API authentication errors
-- Trading limit restrictions
+- Missing or invalid Binance credentials
+- Permission or account-configuration errors
+- Order validation errors
+- Rate limits and server-side Binance API failures
+- Network or transport failures
 
+## Model Context Protocol
 
-## License
-
-This project is open-source under the MIT License.
-
-For contributions, bug reports, or feature requests, submit an issue on [GitHub](https://github.com/your-repo/binance-mcp-server).
+MCP is the protocol used by clients such as Claude Desktop to launch tools and exchange structured requests and responses with this server. This repository exposes Binance functionality as MCP tools over stdio.

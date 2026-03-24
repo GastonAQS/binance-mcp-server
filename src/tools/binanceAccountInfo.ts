@@ -1,69 +1,84 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { spotClient } from "../config/client.js";
+import { spotClient, walletClient } from "../config/binanceClient.js";
+import {
+    createErrorResponse,
+    createTextResponse,
+    ensureBinanceAuthConfigured,
+    formatBinanceError
+} from "./shared/binanceToolUtils.js";
 
 export function registerBinanceAccountInfo(server: McpServer) {
-  server.tool(
-    "binanceAccountInfo",
-    "check binance account info",
-    {},
-    async ({}) => {
-      try {
-        const legacySpotClient = spotClient as any;
-        const accountInfo = await legacySpotClient.restAPI.getAccount({});
-        const accountSnapshot = await legacySpotClient.restAPI.dailyAccountSnapshot({
-          type: "SPOT",
-          limit: 7,
-        });
-        const userAssetResponse = await legacySpotClient.restAPI.userAsset({
-          needBtcValuation: true,
-        });
-        const userAsset = await userAssetResponse.data();
-
-        if (userAsset) {
-          const balances = userAsset.map((item: any) => ({
-            asset: item.asset, free: item.free, locked: item.locked
-          }));
-          const totalAssetOfBtc = userAsset.reduce(
-            (sum: number, item: any) => sum + parseFloat(item.btcValuation || "0"),
-            0
-          ).toFixed(20).replace(/\.?0+$/, "");
-          accountSnapshot.snapshotVos.push({
-            type: "spot",
-            updateTime: Date.now(),
-            data: {
-              totalAssetOfBtc,
-              balances,
+    server.tool(
+        "binanceAccountInfo",
+        "Retrieve account balances, permissions, and a BTC-valued portfolio summary.",
+        {
+            recvWindow: z.number().optional().describe("Optional receive window in milliseconds")
+        },
+        async ({ recvWindow }) => {
+            const authError = ensureBinanceAuthConfigured();
+            if (authError) {
+                return createErrorResponse(authError);
             }
-          });
+
+            try {
+                const params = recvWindow !== undefined ? { recvWindow } : {};
+                const [accountResponse, snapshotResponse, assetResponse, permissionResponse] = await Promise.all([
+                    spotClient.restAPI.getAccount(params),
+                    walletClient.restAPI.dailyAccountSnapshot({ type: "SPOT", limit: 7, ...params }),
+                    walletClient.restAPI.userAsset({ needBtcValuation: true, ...params }),
+                    walletClient.restAPI.getApiKeyPermission(params)
+                ]);
+
+                const [account, snapshot, assets, permissions] = await Promise.all([
+                    accountResponse.data(),
+                    snapshotResponse.data(),
+                    assetResponse.data(),
+                    permissionResponse.data()
+                ]);
+
+                const nonZeroAssets = Array.isArray(assets)
+                    ? assets
+                          .filter((asset) => {
+                              const free = Number(asset.free ?? 0);
+                              const locked = Number(asset.locked ?? 0);
+                              return Number.isFinite(free + locked) && free + locked > 0;
+                          })
+                          .map((asset) => ({
+                              asset: asset.asset,
+                              free: asset.free,
+                              locked: asset.locked,
+                              btcValuation: asset.btcValuation
+                          }))
+                    : [];
+
+                const totalAssetOfBtc = nonZeroAssets
+                    .reduce((sum, asset) => sum + Number(asset.btcValuation ?? 0), 0)
+                    .toFixed(8);
+
+                const topHoldings = [...nonZeroAssets]
+                    .sort((left, right) => Number(right.btcValuation ?? 0) - Number(left.btcValuation ?? 0))
+                    .slice(0, 5)
+                    .map((asset) => `${asset.asset}:${asset.btcValuation ?? "0"} BTC`)
+                    .join(", ");
+
+                return createTextResponse(
+                    `Retrieved Binance account information successfully. Trading enabled: ${
+                        account.canTrade ?? "unknown"
+                    }. Non-zero assets: ${nonZeroAssets.length}. Total BTC valuation: ${totalAssetOfBtc}. Top holdings: ${
+                        topHoldings || "none"
+                    }. API permissions: ${JSON.stringify(permissions)}. Snapshot points returned: ${
+                        snapshot.snapshotVos?.length ?? 0
+                    }. Response: ${JSON.stringify({
+                        account,
+                        permissions,
+                        snapshot,
+                        assets: nonZeroAssets
+                    })}`
+                );
+            } catch (error) {
+                return createErrorResponse(`Failed to retrieve Binance account information: ${formatBinanceError(error)}`);
+            }
         }
-        const btcPrice = await legacySpotClient.restAPI.tickerPrice({ symbol: "BTCUSDT" });
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Get binance account info successfully. data: ${JSON.stringify(accountInfo)}`,
-            },
-            {
-              type: "text",
-              text: `Get binance balance history info successfully. data: ${JSON.stringify(accountSnapshot)}`,
-            },
-            {
-              type: "text",
-              text: `Get BTC price successfully. data: ${JSON.stringify(btcPrice)}`,
-            },
-          ],
-        };
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        return {
-          content: [
-            { type: "text", text: `Server failed: ${errorMessage}` },
-          ],
-          isError: true,
-        };
-      }
-    }
-  );
+    );
 }

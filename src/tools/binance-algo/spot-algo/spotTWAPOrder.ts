@@ -6,7 +6,7 @@ import { algoClient } from "../../../config/binanceClient.js";
 export function registerBinanceSpotTwapNewTrade(server: McpServer) {
     server.tool(
         "BinanceSpotTimeWeightedAveragePriceNewOrder",
-        "The TWAP (Time-Weighted Average Price) New Order API allows users to place TWAP algorithmic orders for USDⓈ-M Futures on Binance.",
+        "The Spot TWAP New Order API allows users to place TWAP algorithmic spot orders on Binance.",
         {
             symbol: z.string().describe("Trading symbol (e.g., BTCUSDT)"),
             side: z.enum(["BUY", "SELL"]).describe("Trading side (BUY or SELL)"),
@@ -50,9 +50,9 @@ export function registerBinanceSpotTwapNewTrade(server: McpServer) {
                     content: [
                         {
                             type: "text",
-                            text: `TWAP order on USDⓈ-M Contracts placed successfully for ${
-                                params.symbol
-                            }. Response: ${JSON.stringify(data)}`
+                            text: `Spot TWAP order placed successfully for ${params.symbol}. Response: ${JSON.stringify(
+                                data
+                            )}`
                         }
                     ]
                 };
@@ -62,7 +62,7 @@ export function registerBinanceSpotTwapNewTrade(server: McpServer) {
                     content: [
                         {
                             type: "text",
-                            text: `Failed to place TWAP algorithmic orders for USDⓈ-M Futures on Binance: ${errorMessage}`
+                            text: `Failed to place spot TWAP order on Binance: ${errorMessage}`
                         }
                     ],
                     isError: true

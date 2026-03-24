@@ -1,51 +1,72 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { spotClient } from "../config/client.js";
+import { spotClient } from "../config/binanceClient.js";
+import {
+    createErrorResponse,
+    createTextResponse,
+    ensureBinanceAuthConfigured,
+    formatBinanceError
+} from "./shared/binanceToolUtils.js";
 
 export function registerBinanceSpotPlaceOrder(server: McpServer) {
-  server.tool(
-    "binanceSpotPlaceOrder",
-    `Trading for small orders will not generate significant selling pressure on the market`,
-    {
-      symbol: z.string().describe("symbol: exemple: BTCUSDT"),
-      side: z.enum(["BUY", "SELL"]).describe("BUY or SELL"),
-      quantity: z.number().describe("quantity Quantity of base asset").optional(),
-      quoteOrderQty: z.number().describe(`MARKET orders using quoteOrderQty specifies the amount the user wants to spend (when buying) or receive (when selling) the quote asset; the correct quantity will be determined based on the market liquidity and quoteOrderQty.
-      E.g. Using the symbol BTCUSDT:
-      BUY side, the order will buy as many BTC as quoteOrderQty USDT can.
-      SELL side, the order will sell as much BTC needed to receive quoteOrderQty USDT.`).optional(),
-    },
-    async ({ symbol, side, quantity, quoteOrderQty }) => {
-      try {
-        const legacySpotClient = spotClient as any;
-        const response = await legacySpotClient.restAPI.newOrder({
-          symbol,
-          side,
-          type: "MARKET",
-          quantity,
-          quoteOrderQty,
-        });
-        const result = await response.data();
+    server.tool(
+        "binanceSpotPlaceOrder",
+        "Place a spot market order for smaller trades using either base quantity or quote quantity.",
+        {
+            symbol: z.string().describe("Trading symbol, for example BTCUSDT"),
+            side: z.enum(["BUY", "SELL"]).describe("Order side"),
+            quantity: z.number().positive().optional().describe("Amount of the base asset to buy or sell"),
+            quoteOrderQty: z
+                .number()
+                .positive()
+                .optional()
+                .describe("Amount of quote asset to spend or receive for a MARKET order"),
+            newClientOrderId: z.string().optional().describe("Optional client order identifier")
+        },
+        async ({ symbol, side, quantity, quoteOrderQty, newClientOrderId }) => {
+            const authError = ensureBinanceAuthConfigured();
+            if (authError) {
+                return createErrorResponse(authError);
+            }
 
+            if (quantity === undefined && quoteOrderQty === undefined) {
+                return createErrorResponse("Either quantity or quoteOrderQty must be provided for a spot market order.");
+            }
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Place a new spot TWAP order with Algo service successfully. result: ${JSON.stringify(result)}}`,
-            },
-          ],
-        };
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        return {
-          content: [
-            { type: "text", text: `Server failed: ${errorMessage}` },
-          ],
-          isError: true,
-        };
-      }
-    }
-  );
+            if (quantity !== undefined && quoteOrderQty !== undefined) {
+                return createErrorResponse("Provide either quantity or quoteOrderQty, not both, for a spot market order.");
+            }
+
+            try {
+                const request: any = {
+                    symbol,
+                    side,
+                    type: "MARKET"
+                };
+
+                if (quantity !== undefined) {
+                    request.quantity = quantity;
+                }
+
+                if (quoteOrderQty !== undefined) {
+                    request.quoteOrderQty = quoteOrderQty;
+                }
+
+                if (newClientOrderId) {
+                    request.newClientOrderId = newClientOrderId;
+                }
+
+                const response = await spotClient.restAPI.newOrder(request);
+                const result = await response.data();
+
+                return createTextResponse(
+                    `Placed Binance spot market order successfully for ${symbol}. Order id: ${
+                        result.orderId ?? "unknown"
+                    }. Response: ${JSON.stringify(result)}`
+                );
+            } catch (error) {
+                return createErrorResponse(`Failed to place Binance spot market order: ${formatBinanceError(error)}`);
+            }
+        }
+    );
 }

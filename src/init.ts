@@ -9,6 +9,20 @@ import { fileURLToPath } from 'url';
 import dotenv from "dotenv";
 dotenv.config();
 
+interface McpServerConfig {
+    command: string;
+    args: string[];
+    env: Record<string, string>;
+    disabled: boolean;
+    autoApprove: string[];
+}
+
+interface ClaudeDesktopConfig {
+    mcpServers: Record<string, McpServerConfig>;
+}
+
+type BinanceMcpConfig = Record<"binance-mcp", McpServerConfig>;
+
 // Binance Gold Color
 const yellow = chalk.hex('#F0B90B');
 
@@ -69,7 +83,7 @@ BINANCE_API_SECRET=${BINANCE_API_SECRET}
 };
 
 // Generate config object
-const generateConfig = async (BINANCE_API_KEY: string, BINANCE_API_SECRET: string,): Promise<any> => {
+const generateConfig = async (BINANCE_API_KEY: string, BINANCE_API_SECRET: string,): Promise<BinanceMcpConfig> => {
     const indexPath = path.resolve(__dirname, '..', 'build', 'index.js'); // one level up from cli/
 
     return {
@@ -86,24 +100,49 @@ const generateConfig = async (BINANCE_API_KEY: string, BINANCE_API_SECRET: strin
     };
 };
 
-// Configure Claude Desktop
-const configureClaude = async (config: object): Promise<boolean> => {
+const getClaudeConfigPath = (): string | null => {
     const userHome = os.homedir();
-    let claudePath;
     const platform = os.platform();
+
     if (platform == "darwin") {
-        claudePath = path.join(userHome, 'Library/Application Support/Claude/claude_desktop_config.json');
-    } else if (platform == "win32") {
-        claudePath = path.join(userHome, 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json');
-    } else {
+        return path.join(userHome, 'Library/Application Support/Claude/claude_desktop_config.json');
+    }
+
+    if (platform == "win32") {
+        return path.join(userHome, 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json');
+    }
+
+    if (platform == "linux") {
+        return path.join(userHome, '.config', 'Claude', 'claude_desktop_config.json');
+    }
+
+    return null;
+};
+
+const isClaudeDesktopConfig = (value: unknown): value is ClaudeDesktopConfig => {
+    if (typeof value !== "object" || value === null) {
+        return false;
+    }
+
+    const candidate = value as Partial<ClaudeDesktopConfig>;
+    return typeof candidate.mcpServers === "object" && candidate.mcpServers !== null;
+};
+
+// Configure Claude Desktop
+const configureClaude = async (config: BinanceMcpConfig): Promise<boolean> => {
+    const claudePath = getClaudeConfigPath();
+
+    if (!claudePath) {
         console.log(chalk.red('❌ Unsupported platform.'));
         return false;
     }
+
+    await fs.ensureDir(path.dirname(claudePath));
     
     if (!fs.existsSync(claudePath)) {
         console.log(chalk.yellow('⚠️ Claude config file not found. Creating a new one with default configuration.'));
         // Create a default configuration object
-        const defaultConfig = {
+        const defaultConfig: ClaudeDesktopConfig = {
             mcpServers: {}
         };
         // Write the default configuration to the file
@@ -112,11 +151,18 @@ const configureClaude = async (config: object): Promise<boolean> => {
 
     
     const jsonData = fs.readFileSync(claudePath, 'utf8');
-    const data = JSON.parse(jsonData);
+    const parsedData: unknown = JSON.parse(jsonData);
+
+    if (!isClaudeDesktopConfig(parsedData)) {
+        throw new Error('Claude Desktop config must contain an mcpServers object.');
+    }
     
-    data.mcpServers = {
-        ...data.mcpServers,
-        ...config,
+    const data: ClaudeDesktopConfig = {
+        ...parsedData,
+        mcpServers: {
+            ...parsedData.mcpServers,
+            ...config,
+        }
     };
     
     await fs.writeJSON(claudePath, data, { spaces: 2 });
@@ -125,7 +171,7 @@ const configureClaude = async (config: object): Promise<boolean> => {
 };
 
 // Save fallback config file
-const saveFallbackConfig = async (config: object): Promise<void> => {
+const saveFallbackConfig = async (config: BinanceMcpConfig): Promise<void> => {
     await fs.writeJSON('config.json', config, { spaces: 2 });
     console.log(yellow('📁 Saved config.json in root project folder.'));
 };
