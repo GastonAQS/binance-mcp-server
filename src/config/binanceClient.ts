@@ -31,7 +31,7 @@ const API_SECRET = process.env.BINANCE_API_SECRET?.trim();
 const PRIVATE_KEY = process.env.BINANCE_PRIVATE_KEY?.replace(/\\n/g, "\n")?.trim();
 const PRIVATE_KEY_PASSPHRASE = process.env.BINANCE_PRIVATE_KEY_PASSPHRASE;
 const PRIVATE_KEY_ALGO = process.env.BINANCE_PRIVATE_KEY_ALGO?.trim().toUpperCase();
-const BASE_URL = "https://api.binance.com";
+const BASE_URL = process.env.BINANCE_BASE_URL?.trim() || "https://api.binance.com";
 
 const configurationRestAPI: BinanceRestConfiguration = {
     apiKey: API_KEY ?? "",

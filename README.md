@@ -81,6 +81,8 @@ Create a `.env` file in the project root:
 ```sh
 BINANCE_API_KEY=your_binance_api_key_here
 BINANCE_API_SECRET=your_binance_api_secret_here
+# Optional: override for Binance Spot Test Network
+# BINANCE_BASE_URL=https://testnet.binance.vision
 ```
 
 ### Key-Pair Authentication
@@ -95,6 +97,41 @@ BINANCE_PRIVATE_KEY_ALGO=RSA
 ```
 
 `BINANCE_PRIVATE_KEY` may be provided with literal newlines or `\n` escapes.
+
+### Non-Live Environment Configuration
+
+Binance currently exposes two separate non-live Spot environments:
+
+1. Spot Test Network
+   - No real Binance account required
+   - Login is done with GitHub
+   - Base URL for this repository: `https://testnet.binance.vision`
+2. Spot Demo Mode
+   - Requires logging into a real Binance account
+   - API keys are created from Binance Demo Trading / `demo.binance.com`
+   - Base URL for this repository: `https://demo-api.binance.com`
+
+For Spot Test Network:
+
+```sh
+BINANCE_API_KEY=your_spot_testnet_api_key
+BINANCE_API_SECRET=your_spot_testnet_api_secret
+BINANCE_BASE_URL=https://testnet.binance.vision
+```
+
+For Spot Demo Mode:
+
+```sh
+BINANCE_API_KEY=your_spot_demo_mode_api_key
+BINANCE_API_SECRET=your_spot_demo_mode_api_secret
+BINANCE_BASE_URL=https://demo-api.binance.com
+```
+
+Important limitations for both environments:
+
+- They are Spot-focused environments; this repository’s non-live support is therefore limited mainly to Spot `/api` tools
+- `/sapi`-backed tools such as Wallet, Convert, Staking, Mining, VIP Loan, Pay, Fiat, Rebate, NFT, and similar product groups are not expected to work there
+- Binance documents a separate USDⓈ-M Futures demo base URL at `https://demo-fapi.binance.com`, but this repository does not currently provide a dedicated futures-demo configuration path
 
 ## Creating a Binance API Key
 
@@ -118,6 +155,41 @@ Official Binance docs:
 - General developer docs: https://developers.binance.com/en/
 - Spot API docs: https://developers.binance.com/docs/binance-spot-api-docs/README
 - Algo API docs: https://developers.binance.com/docs/algo
+- Spot Test Network site: https://testnet.binance.vision/
+- Spot Demo Mode general info: https://developers.binance.com/docs/binance-spot-api-docs/demo-mode/general-info
+
+### Creating a Demo API Key Without a Real Binance Account
+
+If you do not want to use a real Binance account, use Binance Spot Test Network.
+
+Step by step:
+
+1. Open `https://testnet.binance.vision/`
+2. Click **Log In with GitHub**
+3. Generate an API key on the Spot Test Network page
+4. Copy the issued test API key and secret
+5. Set `BINANCE_API_KEY`, `BINANCE_API_SECRET`, and `BINANCE_BASE_URL=https://testnet.binance.vision`
+6. Start the server and test Spot `/api` tools against the virtual balances Binance gives Spot Test Network users automatically
+
+Binance states that:
+
+- Spot Test Network users receive virtual balances automatically
+- only `/api` endpoints are available there
+- testnet data resets periodically, but API keys are preserved across resets
+
+### Creating a Demo API Key With Binance Spot Demo Mode
+
+If you already have a Binance account and want a non-live Spot environment with more realistic market behavior:
+
+1. Log into your Binance account
+2. Open **Binance Demo Trading**
+3. Create an API key from the **API Key Management** page at `https://demo.binance.com`
+4. Set `BINANCE_API_KEY`, `BINANCE_API_SECRET`, and `BINANCE_BASE_URL=https://demo-api.binance.com`
+5. Use Spot `/api` tools against the Demo Mode environment
+
+Binance’s current Demo Mode docs say Spot Demo Mode tracks the live exchange more closely than Spot Test Network, while still remaining non-live. It is not the same thing as futures demo.
+
+If you need futures-demo credentials specifically, use Binance’s futures-demo documentation and base URL separately. Do not assume the Spot Test Network or Spot Demo Mode signup flow applies unchanged to USDⓈ-M futures demo.
 
 ## Tool Surface
 
